@@ -23,6 +23,10 @@ export default function Home() {
     setMessage("");
     setIsLoading(true);
 
+
+
+    //handleScrape("https://webscraper.io/test-sites");
+
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
@@ -32,11 +36,48 @@ export default function Home() {
         body: JSON.stringify({ message }),
       });
 
+      // Check if the message contains a URL before calling handleScrape
+      const urlPattern = /https?:\/\/[^\s]+/;
+      if (urlPattern.test(message)) {
+        const url = message.match(urlPattern)![0];
+        //handleScrape(url);
+      }
+
       // TODO: Handle the response from the chat API to display the AI response in the UI
 
+      //@@NEWW Create an initial empty AI message to show where the response will appear
+      setMessages(prev => [...prev, { role: "ai", content: "" }]);
 
+      //NEWW Get a reader to handle the streaming response
+      const reader = response.body?.getReader();
+      if (!reader) return;
 
+      //@@NEWW Setup decoder and response accumulator
+      const decoder = new TextDecoder();
+      let currentResponse = '';
 
+      //@@NEWW Read and process the stream chunks
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        //@@NEWW Convert chunk to text and accumulate
+        const chunk = decoder.decode(value);
+        currentResponse += chunk;
+
+        //@@NEWW Update the AI message with accumulated response
+        setMessages(prev => {
+          const newMessages = [...prev];
+          newMessages[newMessages.length - 1] = {
+            role: "ai",
+            content: currentResponse
+          };
+          return newMessages;
+        });
+      }
+
+//changes
+      
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -44,15 +85,46 @@ export default function Home() {
     }
   };
 
+  // const handleScrape = async (urlToScrape: string) => {
+  //   setIsLoading(true);
+  //   console.log('Starting to scrape:', urlToScrape); // Debug log
+  //   try {
+  //     const response = await fetch("/api/webscraper", {
+  //       method: "POST",
+  //       headers: {
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: JSON.stringify({ url: urlToScrape }),
+  //     });
+
+  //     const data = await response.json();
+  //     console.log('Scraped data:', data); // Debug log
+
+  //     setMessages(prev => [...prev, {
+  //       role: "ai",
+  //       content: `Scraped content from ${urlToScrape}: ${data.data}`
+  //     }]);
+
+  //   } catch (error: any) {
+  //     console.error("Scraping error:", error);
+  //     // Add error message to chat
+  //     setMessages(prev => [...prev, {
+  //       role: "ai",
+  //       content: `Failed to scrape ${urlToScrape}: ${error.message}`
+  //     }]);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   // TODO: Modify the color schemes, fonts, and UI as needed for a good user experience
   // Refer to the Tailwind CSS docs here: https://tailwindcss.com/docs/customizing-colors, and here: https://tailwindcss.com/docs/hover-focus-and-other-states
   return (
     <div className="flex flex-col h-screen bg-gray-900">
       {/* Header */}
-      <div className="w-full bg-gray-800 border-b border-gray-700 p-4">
+      <div className="w-full bg-violet-950 border-b border-violet-100 p-4">
         <div className="max-w-3xl mx-auto">
-          <h1 className="text-xl font-semibold text-white">Chat</h1>
+          <h1 className="text-xl font-semibold text-white">AI Answer Engine</h1>
         </div>
       </div>
 
@@ -71,8 +143,8 @@ export default function Home() {
               <div
                 className={`px-4 py-2 rounded-2xl max-w-[80%] ${
                   msg.role === "ai"
-                    ? "bg-gray-800 border border-gray-700 text-gray-100"
-                    : "bg-cyan-600 text-white ml-auto"
+                    ? "bg-violet-950 border border-gray-600 text-gray-100"
+                    : "bg-blue-500 text-white ml-auto"
                 }`}
               >
                 {msg.content}
@@ -103,7 +175,7 @@ export default function Home() {
       </div>
 
       {/* Input Area */}
-      <div className="fixed bottom-0 w-full bg-gray-800 border-t border-gray-700 p-4">
+      <div className="fixed bottom-0 w-full bg-violet-950 border-t border-gray-700 p-4">
         <div className="max-w-3xl mx-auto">
           <div className="flex gap-3 items-center">
             <input
@@ -112,12 +184,12 @@ export default function Home() {
               onChange={e => setMessage(e.target.value)}
               onKeyPress={e => e.key === "Enter" && handleSend()}
               placeholder="Type your message..."
-              className="flex-1 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent placeholder-gray-400"
+              className="flex-1 rounded-xl border border-gray-700 bg-gray-900 px-4 py-3 text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-400"
             />
             <button
               onClick={handleSend}
               disabled={isLoading}
-              className="bg-cyan-600 text-white px-5 py-3 rounded-xl hover:bg-cyan-700 transition-all disabled:bg-cyan-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-blue-500 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition-all disabled:bg-cyan-800 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? "Sending..." : "Send"}
             </button>
